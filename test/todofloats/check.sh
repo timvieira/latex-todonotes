@@ -10,6 +10,8 @@
 #      text on both sides of a page break in an inline note,
 #   3c. compiles test_wide.tex (grow) and test_alternate.tex (side=alternate,
 #      leftmarginsep) the same way and checks their layouts and page sizes,
+#   3d. compiles test_fit.tex three ways and checks the default note width
+#       (no grow) and that a \marginparwidth set after loading is kept,
 #   4. compiles the negative control (plain todonotes, \todo inside a float)
 #      and requires that it reproduces "Float(s) lost",
 #   5. renders the test PDF to PNG (pdftoppm -r 60) for a human check.
@@ -121,6 +123,34 @@ else
   echo "   FAILED: page size $size pt, expected 822x842 (A4 plus 2 x 40mm)"
   status=1
 fi
+
+echo "== default note width (test_fit.tex): the room in the margin, no grow"
+# check_fit <jobname> <pretex> <expected width: right|alternate|<sp>>
+check_fit() {
+  for i in 1 2 3; do
+    timeout 60 pdflatex -interaction=nonstopmode -output-directory=out -jobname "$1" \
+      "$2\\input{test_fit.tex}" > "out/$1$i.stdout" 2>&1
+  done
+  n=$(grep -c -E '^!|todofloats Warning|Overfull' "out/$1.log")
+  # \tdf@aux@geometry: paperwidth, paperheight, text left, text right, ceiling,
+  # floor, marginparwidth, marginparsep, leftmarginsep, alternate (sp)
+  read -r pw tl tr mpw mps lsep < <(grep -o 'tdf@aux@geometry{.*' "out/$1.aux" | python3 -c \
+    "import re,sys; v=[int(x) for x in re.findall(r'-?[0-9]+', sys.stdin.read())]; print(v[0], v[2], v[3], v[6], v[7], v[8])")
+  case "$3" in
+    right) want=$((pw - tr - 2 * mps)) ;;
+    alternate) r=$((pw - tr - 2 * mps)); l=$((tl - lsep - mps)); want=$(( l < r ? l : r )) ;;
+    *) want=$3 ;;
+  esac
+  if [ "$n" -eq 0 ] && [ "$mpw" -eq "$want" ]; then
+    echo "   ok: $1: notes are ${mpw}sp wide, as expected"
+  else
+    echo "   FAILED: $1: $n errors/warnings, notes ${mpw}sp wide, expected ${want}sp"
+    status=1
+  fi
+}
+check_fit test_fit "" right
+check_fit test_fit_alternate '\def\fitalternate{1}' alternate
+check_fit test_fit_kept '\def\fitkept{1}' 3276800
 
 echo "== negative control: plain todonotes with \\todo inside a float"
 timeout 60 pdflatex -interaction=nonstopmode -output-directory=out test_marginpar_in_float.tex > out/control.stdout 2>&1

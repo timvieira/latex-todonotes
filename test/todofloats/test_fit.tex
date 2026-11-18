@@ -1,0 +1,26 @@
+% Fourth test document for todofloats.sty: the default note width (no grow).
+% The class-like \marginparwidth of 0.07in set before loading (as ICLR's style
+% does) must be replaced by the room in the margin, less \marginparsep on each
+% side of the note.  check.sh builds it three times:
+%   test_fit            side=auto, one column: the right margin (4cm)
+%   test_fit_alternate  side=alternate: the narrower margin (the left, 2cm)
+%   test_fit_kept       \marginparwidth set to 50pt after loading: kept
+% and checks the width written to the aux file.
+\documentclass[11pt]{article}
+\usepackage[a4paper,left=2cm,right=4cm,top=2.5cm,bottom=2.5cm,marginparsep=10pt]{geometry}
+\setlength{\marginparwidth}{0.07in}
+\ifdefined\fitalternate
+  \usepackage[side=alternate,authors={timv=magenta!10}]{mytodonotes}
+\else
+  \usepackage[authors={timv=magenta!10}]{mytodonotes}
+\fi
+\ifdefined\fitkept
+  \setlength{\marginparwidth}{50pt}
+\fi
+\usepackage{lipsum}
+\begin{document}
+\lipsum[1]
+A note\timv{F1, as wide as the margin allows.} here,
+and another\timv{F2, the second note of the page.} here.
+\lipsum[2]
+\end{document}

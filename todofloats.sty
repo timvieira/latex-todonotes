@@ -68,6 +68,8 @@
 %%                          each side margin to the notes.  The text block does
 %%                          not move or change, so every line and page break is
 %%                          the same as without the option.  Off by default.
+%%                          Without `grow', the notes still get the room in the
+%%                          margin (see NOTE WIDTH).
 %%   gap=<dimen>            minimal vertical distance between two notes (4pt)
 %%   sep=<dimen>            padding between the note text and the edge of its
 %%                          background (3pt)
@@ -75,6 +77,24 @@
 %%   debug                  draw a thin red frame around every margin note
 %%                          and print "id/page/side" (also \todofloatsdebug);
 %%                          write the unit heights of every note to the log
+%%
+%% NOTE WIDTH
+%%   Margin notes are as wide as the margin they go in.  At \begin{document},
+%%   \marginparwidth becomes the room between the text block and the paper
+%%   edge, less \marginparsep between the note and the paper edge and, on the
+%%   right, between the note and the text (on the left, leftmarginsep).  The
+%%   margin is the right one for one-column text with side=auto or right, the
+%%   left one with side=left, and the narrower of the two with side=alternate
+%%   and for two-column text with side=auto; with twoside, the narrower of the
+%%   odd and the even page.  A class's own \marginparwidth is often far too
+%%   small for notes (ICLR's is 0.07in), which is why it is replaced.
+%%   To choose the width yourself, set \marginparwidth AFTER loading the
+%%   package: a value that differs at \begin{document} from the one in force
+%%   when the package was loaded is kept.  A value set before loading (by the
+%%   class, by geometry loaded earlier, or by \setlength) is replaced.  With
+%%   `grow', the width comes from the grown margins as described there.  The
+%%   log says which width was used and why ("Package todofloats Info: margin
+%%   notes ...").  If the margin leaves no room for a note, it is an error.
 %%
 %% HOOKS FOR THE DOCUMENT
 %%   \todofloatsmark{<material>}  used inside a note: <material> (expanded
@@ -118,7 +138,7 @@
 %%     use \pdfcolorstackinit and \pdfstartlink and are skipped without them).
 %% ---------------------------------------------------------------------------
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesPackage{todofloats}[2026/11/11 v0.4 breakable todonotes, margin notes inside floats]
+\ProvidesPackage{todofloats}[2026/11/17 v0.5 breakable todonotes, margin notes inside floats]
 
 \RequirePackage{kvoptions}
 \SetupKeyvalOptions{family=todofloats,prefix=tdf@opt@}
@@ -797,9 +817,64 @@
   \DeclareHookRule{begindocument}{todofloats}{after}{geometry}
 \fi
 
+% The note width without grow (see NOTE WIDTH in the header).  \tdf@loadmpw is
+% the \marginparwidth in force now, while the package is loaded; a different
+% value at \begin{document} was set after loading, and is kept.
+\edef\tdf@loadmpw{\the\marginparwidth}
+\def\tdf@sideleft{left}
+\def\tdf@sideright{right}
+\def\tdf@sideauto{auto}
+\newif\iftdf@useleft
+\newif\iftdf@useright
+\def\tdf@fitmargin{%
+  \ifdim\tdf@growdim>\z@
+  \else\ifdim\marginparwidth=\tdf@loadmpw\relax
+    \tdf@useleftfalse \tdf@userighttrue
+    \ifx\tdf@opt@side\tdf@sideleft \tdf@uselefttrue \tdf@userightfalse \fi
+    \ifx\tdf@opt@side\tdf@alternate \tdf@uselefttrue \fi
+    \if@twocolumn \ifx\tdf@opt@side\tdf@sideauto \tdf@uselefttrue \fi \fi
+    % \dimen@ the narrower left margin, \dimen@ii the narrower right margin
+    % (odd and, with twoside, even pages), each from the paper edge to the text
+    \dimen@=\oddsidemargin \dimen@ii=\oddsidemargin
+    \if@twoside
+      \ifdim\evensidemargin<\dimen@ \dimen@=\evensidemargin \fi
+      \ifdim\evensidemargin>\dimen@ii \dimen@ii=\evensidemargin \fi
+    \fi
+    \dimen@=\dimexpr\tdf@horigin+\hoffset+\dimen@\relax
+    \dimen@ii=\dimexpr\paperwidth-\tdf@horigin-\hoffset-\dimen@ii-\textwidth\relax
+    \edef\tdf@roominfo{%
+      \iftdf@useleft left margin \the\dimen@\iftdf@useright, \fi\fi
+      \iftdf@useright right margin \the\dimen@ii\fi}%
+    % less the gaps on either side of the note
+    \advance\dimen@ -\dimexpr\tdf@lsep+\marginparsep\relax
+    \advance\dimen@ii -2\marginparsep
+    \iftdf@useleft
+      \iftdf@useright \ifdim\dimen@ii<\dimen@ \dimen@=\dimen@ii \fi \fi
+    \else
+      \dimen@=\dimen@ii
+    \fi
+    \ifdim\dimen@>\z@
+      \PackageInfo{todofloats}{margin notes are \the\dimen@\space wide, the
+        room in the margin (\tdf@roominfo) less \the\marginparsep\space on
+        each side of the note\iftdf@useleft\ifdim\tdf@lsep=\marginparsep\else
+        \space (\the\tdf@lsep\space next to the text on the left)\fi\fi;
+        the \string\marginparwidth\space before was \tdf@loadmpw}%
+      \marginparwidth=\dimen@
+    \else
+      \PackageError{todofloats}{No room for margin notes
+        (\tdf@roominfo, less \the\marginparsep\space on each side of the
+        note)}{Widen the margin with the option grow=<dimen>, or set
+        \string\marginparwidth\space after loading the package.}%
+    \fi
+  \else
+    \PackageInfo{todofloats}{margin notes are \the\marginparwidth\space wide,
+      the \string\marginparwidth\space set after loading the package}%
+  \fi\fi}
+
 \AtBeginDocument{%
   \tdf@grow
   \tdf@setlsep
+  \tdf@fitmargin
   \tdf@sepdim=\dimexpr\tdf@opt@sep\relax
   \setbox\tdf@tmpbox\hbox{\setkeys{todonotes}{}\@todonotes@useSizeCommand\strut
     \global\tdf@strutht=\ht\strutbox \global\tdf@strutdp=\dp\strutbox}%

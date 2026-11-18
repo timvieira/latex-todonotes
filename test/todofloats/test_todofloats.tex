@@ -2,7 +2,7 @@
 % Compile 3x with:  timeout 60 pdflatex -interaction=nonstopmode -output-directory=out test_todofloats.tex
 % (check.sh does this and verifies the layout from the aux file.)
 \documentclass[11pt,twocolumn]{article}
-\usepackage[a4paper,margin=2.5cm,heightrounded=true,marginparwidth=59pt,marginparsep=10pt]{geometry}
+\usepackage[a4paper,margin=2.5cm,heightrounded=true,marginparsep=10pt]{geometry}
 \usepackage{hyperref}   % before algorithm, as in main.tex (acl.sty loads hyperref first)
 \usepackage{caption}    % as acl.sty does; makes \captionof{algorithm} work with float.sty
 \usepackage{lipsum}
@@ -19,6 +19,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % TODONOTE CONFIGURATION (../../mytodonotes.sty on ../../todofloats.sty)
 \usepackage[authors={timv=magenta!10},agents={claude,codex}]{mytodonotes} % [disable]
+% Notes 59pt wide, set after loading so that it is kept (the default would be
+% the room in the margin, 51pt here; see NOTE WIDTH in todofloats.sty).
+\setlength{\marginparwidth}{59pt}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \usepackage[capitalise]{cleveref}   % as in main.tex (it re-patches \caption, needed for \captionof{algorithm})
 
