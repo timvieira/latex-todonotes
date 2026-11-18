@@ -25,6 +25,11 @@ from the .aux file, so compile first), who spoke, and who spoke last.
   open_items.py [main.tex]                    every open item
   open_items.py --awaiting sam                items where sam did not speak last
   open_items.py --who claude                  items opened by claude
+  open_items.py --later                       the notes saved for later instead
+
+A note with the option `later' (\\sam[later]{...}, \\claude[sam][later]{...}) is
+saved for a later revision: it is not an open item, and is only counted at the
+end of the list, unless --later asks for those notes.
   open_items.py --json                        machine-readable
 
 Exit status is 0 (also when there are no open items).
@@ -268,10 +273,11 @@ def scan(files, authors, agents, legacy, want_suggest):
             if "#" in body[:3]:
                 continue   # a definition, not a use
             opener = agents[who] + ("@" + owner if owner else "") if kind == "agent" else who
+            later = any(o.strip() == "later" for opt in opts for o in opt.split(","))
             thread = replies(body, agents)
             spans.append((fname, m.start(), end))
             items.append(dict(kind="note", place=place, file=fname, line=lineno(m.start()),
-                              endline=lineno(end - 1), who=opener, replies=thread,
+                              endline=lineno(end - 1), who=opener, replies=thread, later=later,
                               last=(thread[-1] if thread else opener),
                               text=excerpt(re.split(r"\\response\{|\\[A-Za-z]+Response\b", body)[0], 200)))
 
@@ -321,6 +327,7 @@ def main():
     ap.add_argument("--aux", metavar="FILE", help=".aux file to read the note numbers from "
                     "(default: the newest one of the paper that has them)")
     ap.add_argument("--width", type=int, default=72, help="width of the text excerpt")
+    ap.add_argument("--later", action="store_true", help="list the notes saved for later instead")
     ap.add_argument("--json", action="store_true", help="print JSON")
     args = ap.parse_args()
 
@@ -360,12 +367,17 @@ def main():
     if args.awaiting:
         items = [it for it in items if it["kind"] != "note" or bare(it["last"]) != args.awaiting.lower()]
 
+    n_later = sum(1 for it in items if it.get("later"))
+    items = [it for it in items if bool(it.get("later")) == args.later]
+
     if args.json:
         json.dump(items, sys.stdout, indent=1, ensure_ascii=False)
         print()
         return 0
     if not items:
-        print("no open items")
+        print("no notes saved for later" if args.later else "no open items")
+        if n_later and not args.later:
+            print("%d notes saved for later (--later lists them)" % n_later)
         return 0
     for k, it in enumerate(items, 1):
         where = "%s:%d" % (it["file"], it["line"])
@@ -384,7 +396,12 @@ def main():
     n_notes = sum(it["kind"] == "note" for it in items)
     n_prop = sum(it["kind"] == "proposal" for it in items)
     n_todo = sum(it["kind"] == "TODO" for it in items)
+    if args.later:
+        print("%d notes saved for later" % n_notes)
+        return 0
     print("%d open items: %d notes, %d proposals, %d TODO markers" % (len(items), n_notes, n_prop, n_todo))
+    if n_later:
+        print("%d notes saved for later (--later lists them)" % n_later)
     return 0
 
 

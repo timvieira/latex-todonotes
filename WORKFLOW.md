@@ -203,6 +203,17 @@ suggestion leaves the author hunting for a decision that has already been made.
   backwards compatibility for papers that predate `agentnotes.sty` — it must
   keep building, and its rendering must not change, so do not modernize it.
 
+## Notes saved for later
+
+A note that will not be dealt with in this revision is *saved for later*:
+add the option `later` to it, `\sam[later]{...}` or `\claude[sam][later]{...}`
+(`\Sam[later]{...}` inline). Nothing else about the note changes, its text and
+replies stay as they are, and it keeps a number. It is drawn on gray with a
+`later` cell after its tag; the package option `later=hide` leaves every such
+note out of the PDF. `tools/open_items.py` leaves these notes out of the open
+items and counts them at the end; `--later` lists them instead. Saving a note
+for later is its author's call: add the option only when they ask.
+
 ## After completing each editing task
 
 1. **Enumerate open items**: run `tools/open_items.py <main.tex>` from this
@@ -210,7 +221,8 @@ suggestion leaves the author hunting for a decision that has already been made.
    has in the PDF). It lists author notes and agent notes from *any* agent with
    the replies inside them and who spoke last, and the `\<agent>Suggest` /
    `<Agent>Suggest` proposals awaiting a decision; `--awaiting <name>` keeps
-   the items where `<name>` did not have the last word. Without the tool, scan
+   the items where `<name>` did not have the last word, and notes saved for
+   later are only counted (`--later` lists them). Without the tool, scan
    the paper for the same things by hand, and for `TODO` markers
 2. **Present the list**: Show a numbered list of open items with brief
    descriptions and line references

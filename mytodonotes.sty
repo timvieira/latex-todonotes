@@ -25,6 +25,11 @@
 %%     note makes \cref{note:<x>} (or \ref) print the same tag, linked to the
 %%     note; with the option refs=number it prints #<number> instead.
 %%   * \response{<name>}: a reply inside somebody else's note, under a rule.
+%%   * Saved for later.  The option `later' on any note, \sam[later]{...} or
+%%     \claude[sam][later]{...}, keeps the note for a later revision: it is
+%%     drawn on gray with a `later' cell after its tag, and the package option
+%%     later=hide leaves every such note out of the PDF.  open_items.py lists
+%%     these notes apart from the open items.
 %%
 %% OPTIONS
 %%   authors={<list>}   authors to declare, as for \noteauthors
@@ -38,6 +43,8 @@
 %%   refs=tag|number    what \cref{note:<x>} prints: the note's tag, author and
 %%                      number (default), or #<number> in the text font, which
 %%                      is quieter in running text
+%%   later=show|hide    draw the notes saved for later (default), or leave
+%%                      them out of the PDF
 %%   Everything else goes to todofloats.sty (side, gap, sep, grow, debug, ...)
 %%   and from there to todonotes (disable, ...).
 
@@ -52,6 +59,7 @@
 \DeclareStringOption[0]{seed}
 \DeclareStringOption[tag]{refs}
 \DeclareStringOption[pill]{tags}
+\DeclareStringOption[show]{later}
 \DeclareDefaultOption{\PassOptionsToPackage{\CurrentOption}{todofloats}}
 \ProcessKeyvalOptions{mytodonotes}
 \PassOptionsToPackage{textsize=\mtn@opt@textsize}{todofloats}
@@ -387,7 +395,25 @@
 %% just no longer sees the flag it keys on.  Snapshot the flag before the note
 %% and restore it after.  The text after an INLINE note is not indented.
 \newif\ifnote@nobreak
+% Saved for later: `later' among the options draws the note on gray, with a
+% `later' cell after its tag; with the package option later=hide the note is
+% left out.  todonotes is told the key exists, and ignores it.
+\define@key{todonotes}{later}[]{}
+\colorlet{notecolor-later}{black!7}
+\def\mtn@later@hide{hide}
+\DeclareRobustCommand*\note@latertag[2]{% #1 = tag command, #2 = number
+  #1{#2}\,\begingroup\note@setaccent{gray}{note@accenta}%
+  \note@pill{note@accenta}{later}{note@accenta}{}{}\endgroup}
 \newcommand{\note@tagged}[4][]{%
+  \in@{later}{#1}%
+  \ifin@
+    \ifx\mtn@opt@later\mtn@later@hide\else
+      \note@tagged@[#1]{\note@latertag{#2}}{notecolor-later}{#4}%
+    \fi
+  \else
+    \note@tagged@[#1]{#2}{#3}{#4}%
+  \fi}
+\newcommand{\note@tagged@}[4][]{%
   \note@nobreakfalse
   \ifvmode\if@nobreak\note@nobreaktrue\fi\fi
   {\todo[color=#3,caption={},#1]{\noteparstyle\note@head{#2}#4}}%

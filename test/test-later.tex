@@ -1,0 +1,18 @@
+% test-later.tex --- notes saved for later (the option `later').
+% `make later-check' builds it twice, with later=show (default) and later=hide,
+% and checks the text of both PDFs and the open_items.py listing.
+\documentclass{article}
+\usepackage[left=1in,right=2.9in,top=1in,bottom=1in]{geometry}
+\setlength{\marginparwidth}{5.4cm}
+\usepackage[authors={sam, lee}, agents={claude}]{mytodonotes}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\begin{document}
+\section{Notes}
+An open note.\sam{OPENSAM text.}
+A parked note.\sam[later]{\label{note:parked}LATERSAM text. \claudeResponse[sam] LATERREPLY text.}
+A parked agent note.\claude[sam][later]{LATERCLAUDE text.}
+A parked inline note.\Lee[later]{LATERINLINE text.}
+An open agent note.\claude[lee]{OPENCLAUDE text.}
+A reference to the parked note: \cref{note:parked}.
+\end{document}

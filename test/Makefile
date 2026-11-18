@@ -66,6 +66,28 @@ compat-bless: test-compat.pdf
 engine-check: $(PACKAGES)
 	cd todofloats && bash check.sh
 
+# Notes saved for later (the option `later'): drawn with a `later' cell by
+# default, left out of the PDF with later=hide, and listed apart by
+# open_items.py.
+later-check: test-later.tex $(PACKAGES) ../tools/open_items.py
+	@latexmk -pdf -interaction=nonstopmode test-later.tex >/dev/null 2>&1 || { echo "LATER FAILED: show build"; exit 1; }; \
+	latexmk -pdf -interaction=nonstopmode -jobname=test-later-hide \
+	  -usepretex='\PassOptionsToPackage{later=hide}{mytodonotes}' test-later.tex >/dev/null 2>&1 || { echo "LATER FAILED: hide build"; exit 1; }; \
+	show=$$(pdftotext test-later.pdf - | tr '\n' ' '); hide=$$(pdftotext test-later-hide.pdf - | tr '\n' ' '); \
+	for w in OPENSAM OPENCLAUDE LATERSAM LATERREPLY LATERCLAUDE LATERINLINE; do \
+	  echo "$$show" | grep -q $$w || { echo "LATER FAILED: $$w missing with later=show"; exit 1; }; done; \
+	[ $$(echo "$$show" | grep -o later | wc -l) -ge 4 ] || { echo "LATER FAILED: fewer than four later tags"; exit 1; }; \
+	for w in OPENSAM OPENCLAUDE; do \
+	  echo "$$hide" | grep -q $$w || { echo "LATER FAILED: $$w missing with later=hide"; exit 1; }; done; \
+	for w in LATERSAM LATERREPLY LATERCLAUDE LATERINLINE; do \
+	  echo "$$hide" | grep -q $$w && { echo "LATER FAILED: $$w shown with later=hide"; exit 1; }; done; \
+	open=$$(python3 ../tools/open_items.py test-later.tex | tail -2 | tr '\n' ' '); \
+	echo "$$open" | grep -q '2 open items: 2 notes' && echo "$$open" | grep -q '3 notes saved for later' \
+	  || { echo "LATER FAILED: open_items.py says: $$open"; exit 1; }; \
+	[ $$(python3 ../tools/open_items.py --later test-later.tex | grep -c '^[0-9]*\. ') = 3 ] \
+	  || { echo "LATER FAILED: open_items.py --later"; exit 1; }; \
+	echo "later-check OK: shown, hidden with later=hide, listed apart"
+
 # The option refs=number: \ref and \cref of a note print #<number>, not its tag.
 # Builds the example with the option passed from outside and checks the aux
 # (every note label is \note@numref) and the text of the PDF (the references).
@@ -102,4 +124,4 @@ clean:
 	latexmk -C -jobname=example-tags example.tex
 	rm -rf todofloats/out
 
-.PHONY: all clean compat-check compat-build compat-render compat-bless engine-check refs-number tags-plain open-items
+.PHONY: all clean later-check compat-check compat-build compat-render compat-bless engine-check refs-number tags-plain open-items
